@@ -128,3 +128,7 @@ log.txt
 .idea/
 
 .DS_Store
+
+data_files/
+predictions/
+flag_*.txt

@@ -37,6 +37,7 @@ class UGP:
         parameters = self._additional_parameters(raw_data)
 
         # Construct and execute command
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         self.run_ugp(_flags(parameters, str(data_path), str(output_path), self.s_as_input,
                             model_name, raw_data['ytrain'].shape[0]))
 
@@ -336,7 +337,7 @@ def _split_train_dev(inputs, labels, sensitive):
                 ytest=labels[test_fraction], stest=sensitive[test_fraction])
 
 
-def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
+def _flags(parameters, data_path, save_path, s_as_input, model_name, num_train):
     batch_size = min(MAX_BATCH_SIZE, num_train)
     return {**dict(
         tf_mode='eager' if USE_EAGER else 'graph',
@@ -353,11 +354,11 @@ def _flags(parameters, data_path, save_dir, s_as_input, model_name, num_train):
         eval_epochs=70,
         summary_steps=100000,
         chkpnt_steps=100000,
-        save_dir=save_dir,  # "/home/ubuntu/out2/",
+        save_dir='',  # "/home/ubuntu/out2/",
         plot='',
         logging_steps=5,
         gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
-        preds_path='predictions.npz',  # save the predictions into `predictions.npz`
+        preds_path=save_path,  # path where to save predictions
         num_components=1,
         num_samples=1000,
         diag_post=False,
@@ -380,4 +381,4 @@ def _num_epochs(num_train):
     num_train == 10,000 => num_epochs == 70
     num_train == 49,000,000 => num_epochs == 1
     """
-    return int(7000 / np.sqrt(num_train))
+    return int(4000 / np.sqrt(num_train))

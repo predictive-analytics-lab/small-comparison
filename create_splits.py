@@ -9,6 +9,7 @@ from data.objects.list import DATASETS, get_dataset_names
 from data.objects.processed_data import ProcessedData
 
 NUM_SPLITS = 5
+DEFAULT_DATA_DIR = "./data_files"
 
 
 def main(save_path, datasets=get_dataset_names(), num_splits=NUM_SPLITS):
@@ -18,11 +19,11 @@ def main(save_path, datasets=get_dataset_names(), num_splits=NUM_SPLITS):
         if dataset.get_dataset_name() not in datasets:
             continue
 
-        print("\nEvaluating dataset:" + dataset.get_dataset_name())
+        print(f"\nCreating splits for dataset: {dataset.get_dataset_name()}")
 
         all_sensitive_attributes = dataset.get_sensitive_attributes_with_joint()
         for sensitive in dataset.get_sensitive_attributes():
-            print(f"Sensitive attribute:{sensitive}")
+            print(f"Sensitive attribute: {sensitive}")
             processed_dataset = ProcessedData(dataset)
             train_test_splits = processed_dataset.create_train_test_splits(num_splits, sensitive)
             for split_id, split in enumerate(train_test_splits[tag]):
@@ -34,9 +35,10 @@ def main(save_path, datasets=get_dataset_names(), num_splits=NUM_SPLITS):
                     train, test, class_attr, positive_val, all_sensitive_attributes, sensitive,
                     privileged_vals
                 )
-                filename = f"{dataset}_{sensitive}_{split_id}"
+                filename = f"{dataset.get_dataset_name()}_{sensitive}_{split_id}"
                 data_path = Path(save_path) / Path(filename + ".npz")
                 np.savez(data_path, **raw_data)
+                print(f"Written to file: '{filename}'")
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
@@ -75,4 +77,4 @@ def fix_labels(labels, positive_class_val):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1] if len(sys.argv) > 1 else '.')
+    main(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DATA_DIR)
