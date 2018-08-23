@@ -1,5 +1,5 @@
 import pandas as pd
-from data.objects.Data import Data
+from data.objects.data import Data
 
 class Ricci(Data):
 

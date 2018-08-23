@@ -1,4 +1,4 @@
-from data.objects.Data import Data
+from data.objects.data import Data
 import numpy as np
 import pandas as pd
 
