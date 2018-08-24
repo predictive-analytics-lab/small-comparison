@@ -37,17 +37,19 @@ def main(save_path, datasets=get_dataset_names(), num_splits=NUM_SPLITS):
                 )
                 filename = f"{dataset.get_dataset_name()}_{sensitive}_{split_id}"
                 data_path = Path(save_path) / Path(filename + ".npz")
-                np.savez(data_path, **raw_data)
+                np.savez_compressed(data_path, **raw_data)
                 print(f"Written to file: '{filename}'")
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
                   single_sensitive, privileged_vals):
     # Separate data
-    sensitive = [df[single_sensitive].values[:, np.newaxis] for df in [train_df, test_df]]
-    label = [df[class_attr].values[:, np.newaxis] for df in [train_df, test_df]]
-    nosensitive = [df.drop(columns=sensitive_attrs).drop(columns=class_attr).values
-                   for df in [train_df, test_df]]
+    sensitive = [df[single_sensitive].values[:, np.newaxis].astype(np.int32)
+                 for df in [train_df, test_df]]
+    label = [df[class_attr].values[:, np.newaxis].astype(np.int32) for df in [train_df, test_df]]
+    nosensitive = [
+        df.drop(columns=sensitive_attrs).drop(columns=class_attr).values.astype(np.float32)
+        for df in [train_df, test_df]]
 
     # Check sensitive attributes
     assert list(np.unique(sensitive[0])) == [0, 1] or list(np.unique(sensitive[0])) == [0., 1.]
