@@ -27,7 +27,7 @@ def main():
         data_path = Path(data_file)
         for algo in ALGOS:
             name = algo.get_name()
-            algo.run(data_path, results_dir / Path(f"{name}_{data_path.stem}.npz"))
+            algo.run(data_path, results_dir / Path(f"{data_path.stem}_{name}.npz"))
 
 
 if __name__ == "__main__":
