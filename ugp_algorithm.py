@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 from subprocess import call
+from tempfile import TemporaryDirectory
 import json
 import numpy as np
 
@@ -198,24 +199,23 @@ class UGPEqOpp(UGP):
             p_s1=p_s[1],
         )
 
-    def run(self, *data):
+    def run(self, data_path, output_path, model_name="local"):
         self.counter += 1
-        raw_data, label_converter = _prepare_data(*data)
+        raw_data = np.load(data_path)
 
         parameters = self._additional_parameters(raw_data)
 
-        with TemporaryDirectory() as tmpdir:
-            tmp_path = Path(tmpdir)
-            data_path = tmp_path / Path("data.npz")
-            model_name = "local"  # f"run{self.counter}_s_as_input_{self.s_as_input}"
-            flags = _flags(parameters, str(data_path), tmpdir, self.s_as_input, model_name,
-                           len(raw_data['ytrain']))
+        if self.odds is None:
+            with TemporaryDirectory() as tmpdir:
+                tmp_path = Path(tmpdir)
+                tmp_data_path = tmp_path / Path("data.npz")
+                flags = _flags(parameters, str(tmp_data_path), tmpdir, self.s_as_input, model_name,
+                               len(raw_data['ytrain']))
 
-            if self.odds is None:
                 # Split the training data into train and dev and save it to `data.npz`
                 train_dev_data = _split_train_dev(
                     raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
-                np.savez(data_path, **train_dev_data)
+                np.savez(tmp_data_path, **train_dev_data)
 
                 # First run
                 self.run_ugp(flags)
@@ -223,28 +223,23 @@ class UGPEqOpp(UGP):
                 # Read the results from the numpy file 'predictions.npz'
                 prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
                 preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
-                odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
 
-                # Enforce equality of opportunity
-                opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
-                odds['p_ybary1_s0'] = opportunity
-                odds['p_ybary1_s1'] = opportunity
-                flags.update({'train_steps': 2 * flags['train_steps'], **odds})
-            else:
-                flags.update(self.odds)
+            odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
 
-            # Save with real test data
-            np.savez(data_path, **raw_data)
+            # Enforce equality of opportunity
+            opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
+            odds['p_ybary1_s0'] = opportunity
+            odds['p_ybary1_s1'] = opportunity
+            additional = {'train_steps': 2 * flags['train_steps'], **odds}
+        else:
+            additional = self.odds
+        # def _flags(parameters, data_path, save_path, s_as_input, model_name, num_train):
+        flags = _flags(parameters, str(data_path), str(output_path), self.s_as_input, model_name,
+                       raw_data['ytrain'].shape[0])
+        flags.update(additional)
 
-            # Second run
-            self.run_ugp(flags)
-
-            # Read the results from the numpy file 'predictions.npz'
-            output = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
-            pred_mean = output['pred_mean']
-
-        # Convert the result to the expected format
-        return label_converter((pred_mean > 0.5).astype(raw_data['ytest'].dtype)[:, 0]), []
+        # Second run
+        self.run_ugp(flags)
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
