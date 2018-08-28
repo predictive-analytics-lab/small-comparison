@@ -6,8 +6,8 @@ import json
 import numpy as np
 
 # TODO: find a better way to specify the path
-# UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
-UGP_PATH = "/its/home/tk324/PycharmProjects/UniversalGP/gaussian_process.py"
+UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
+# UGP_PATH = "/its/home/tk324/PycharmProjects/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
 MAX_BATCH_SIZE = 5000
