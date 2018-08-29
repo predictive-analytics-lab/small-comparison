@@ -25,22 +25,23 @@ class UGP:
         self.counter = 0
         self.s_as_input = s_as_input
         self.use_lr = use_lr
-        self.name = f"UGP_in_{s_as_input}"
+        self.basename = "ULR" if use_lr else "UGP"
+        self.name = f"{self.basename}_in_{s_as_input}"
 
     def run(self, data_path, output_path, model_name="local"):
         """
         Run
         """
         self.counter += 1
-        raw_data = np.load(data_path)
-
-        # Set algorithm dependent parameters
-        parameters = self._additional_parameters(raw_data)
+        with np.load(data_path) as raw_data:
+            # Set algorithm dependent parameters
+            parameters = self._additional_parameters(raw_data)
+            num_train = raw_data['ytrain'].shape[0]
 
         # Construct and execute command
         output_path.parent.mkdir(parents=True, exist_ok=True)
         self.run_ugp(_flags(parameters, str(data_path), str(output_path), self.s_as_input,
-                            model_name, raw_data['ytrain'].shape[0]))
+                            model_name, num_train))
 
     @staticmethod
     def run_ugp(flags):
@@ -94,11 +95,11 @@ class UGPDemPar(UGP):
         """
         super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
-            self.name = "UGP_dem_par_av_True"
+            self.name = f"{self.basename}_dem_par_av_True"
             if marginal:
                 self.name += "_marg"
         else:
-            self.name = f"UGP_dem_par_in_{s_as_input}"
+            self.name = f"{self.basename}_dem_par_in_{s_as_input}"
         if target_acceptance is not None:
             self.name += f"_tar_{target_acceptance}"
         elif target_mode != self.MEAN:
@@ -147,14 +148,14 @@ class UGPDemPar(UGP):
 class UGPEqOpp(UGP):
     """GP algorithm which enforces equality of opportunity"""
     def __init__(self, s_as_input=True, average_prediction=False, tpr=None, marginal=False,
-                 tnr0=None, tnr1=None, tpr0=None, tpr1=None):
-        super().__init__(s_as_input=s_as_input)
+                 tnr0=None, tnr1=None, tpr0=None, tpr1=None, use_lr=False):
+        super().__init__(s_as_input=s_as_input, use_lr=use_lr)
         if s_as_input and average_prediction:
-            self.name = "UGP_eq_opp_av_True"
+            self.name = f"{self.basename}_eq_opp_av_True"
             if marginal:
                 self.name += "_marg"
         else:
-            self.name = f"UGP_eq_opp_in_{s_as_input}"
+            self.name = f"{self.basename}_eq_opp_in_{s_as_input}"
 
         self.odds = None
         if any(x is not None for x in [tnr0, tnr1, tpr0, tpr1]):  # if any of them is not `None`
@@ -201,45 +202,54 @@ class UGPEqOpp(UGP):
 
     def run(self, data_path, output_path, model_name="local"):
         self.counter += 1
-        raw_data = np.load(data_path)
-
-        parameters = self._additional_parameters(raw_data)
+        with np.load(data_path) as raw_data:
+            parameters = self._additional_parameters(raw_data)
+            num_train = raw_data['ytrain'].shape[0]
+            train_data = (raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
 
         if self.odds is None:
-            with TemporaryDirectory() as tmpdir:
-                tmp_path = Path(tmpdir)
-                tmp_data_path = tmp_path / Path("data.npz")
-                flags = _flags(parameters, str(tmp_data_path), tmpdir, self.s_as_input, model_name,
-                               len(raw_data['ytrain']))
-
-                # Split the training data into train and dev and save it to `data.npz`
-                train_dev_data = _split_train_dev(
-                    raw_data['xtrain'], raw_data['ytrain'], raw_data['strain'])
-                np.savez(tmp_data_path, **train_dev_data)
-
-                # First run
-                self.run_ugp(flags)
-
-                # Read the results from the numpy file 'predictions.npz'
-                prediction_on_train = np.load(tmp_path / Path(model_name) / Path("predictions.npz"))
-                preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
-
-            odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
-
-            # Enforce equality of opportunity
-            opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
-            odds['p_ybary1_s0'] = opportunity
-            odds['p_ybary1_s1'] = opportunity
-            additional = {'train_steps': 2 * flags['train_steps'], **odds}
+            additional = self.estimate_parameters(train_data, parameters, num_train, model_name)
         else:
             additional = self.odds
-        # def _flags(parameters, data_path, save_path, s_as_input, model_name, num_train):
+
         flags = _flags(parameters, str(data_path), str(output_path), self.s_as_input, model_name,
-                       raw_data['ytrain'].shape[0])
+                       num_train)
         flags.update(additional)
 
         # Second run
         self.run_ugp(flags)
+
+    def estimate_parameters(self, train_data, parameters, num_train, model_name):
+        """Estimate the accuracy that can be achieved on the subgroups
+
+        In order to estimate this, a model is trained on a subset of the training data and is
+        evaluated on a different subset of the training data.
+        """
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            tmp_data_path = tmp_path / Path("data.npz")
+            tmp_out_path = tmp_path / Path("predictions.npz")
+
+            # Split the training data into train and dev and save it to `data.npz`
+            train_dev_data = _split_train_dev(*train_data)
+            np.savez(tmp_data_path, **train_dev_data)
+
+            # First run
+            flags = _flags(parameters, str(tmp_data_path), str(tmp_out_path), self.s_as_input,
+                           model_name, num_train)
+            self.run_ugp(flags)
+
+            # Read the results from the numpy file 'predictions.npz'
+            with np.load(tmp_out_path) as prediction_on_train:
+                preds = (prediction_on_train['pred_mean'] > 0.5).astype(int)
+
+        odds = _compute_odds(train_dev_data['ytest'], preds, train_dev_data['stest'])
+
+        # Enforce equality of opportunity
+        opportunity = min(odds['p_ybary1_s0'], odds['p_ybary1_s1'])
+        odds['p_ybary1_s0'] = opportunity
+        odds['p_ybary1_s1'] = opportunity
+        return {'train_steps': 2 * flags['train_steps'], **odds}
 
 
 def _prepare_data(train_df, test_df, class_attr, positive_class_val, sensitive_attrs,
