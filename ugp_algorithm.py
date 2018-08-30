@@ -12,6 +12,8 @@ UGP_PATH = "/home/ubuntu/code/UniversalGP/gaussian_process.py"
 USE_EAGER = False
 MAX_TRAIN_STEPS = 10000
 MAX_BATCH_SIZE = 10000
+LR_BATCH_SIZE = 32
+LR_EPOCHS = 10
 MAX_NUM_INDUCING = 5000  # 2500 seems more than enough
 
 
@@ -63,9 +65,15 @@ class UGP:
         """
         return self.name
 
-    def _additional_parameters(self, _):
+    def _additional_parameters(self, raw_data):
+        if self.use_lr:
+            return dict(
+                inf='LogReg',
+                batch_size=LR_BATCH_SIZE,
+                train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+            )
         return dict(
-            inf='LogReg' if self.use_lr else 'VariationalWithS',
+            inf='VariationalWithS',
         )
 
     def _save_in_json(self, save_path):
@@ -132,6 +140,20 @@ class UGPDemPar(UGP):
         else:
             p_s = [0.5] * 2
 
+        if self.use_lr:
+            return dict(
+                inf='FairLogReg',
+                batch_size=LR_BATCH_SIZE,
+                train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+                target_rate1=target_rate,
+                target_rate2=target_rate,
+                biased_acceptance1=biased_acceptance[0],
+                biased_acceptance2=biased_acceptance[1],
+                probs_from_flipped=False,
+                average_prediction=self.average_prediction,
+                p_s0=p_s[0],
+                p_s1=p_s[1],
+            )
         return dict(
             inf='FairLogReg' if self.use_lr else 'VariationalYbar',
             target_rate1=target_rate,
@@ -187,6 +209,21 @@ class UGPEqOpp(UGP):
         else:
             p_s = [0.5] * 2
 
+        if self.use_lr:
+            return dict(
+                inf='EqOddsLogReg',
+                batch_size=LR_BATCH_SIZE,
+                train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+                p_ybary0_s0=1.0,
+                p_ybary0_s1=1.0,
+                p_ybary1_s0=1.0,
+                p_ybary1_s1=1.0,
+                biased_acceptance1=biased_acceptance[0],
+                biased_acceptance2=biased_acceptance[1],
+                average_prediction=self.average_prediction,
+                p_s0=p_s[0],
+                p_s1=p_s[1],
+            )
         return dict(
             inf='VariationalYbarEqOdds',
             p_ybary0_s0=1.0,

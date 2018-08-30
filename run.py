@@ -9,17 +9,17 @@ OUTPUT_DIR = "./predictions/"
 DATA_DIR = "./data_files/"
 
 ALGOS = [
-    UGP(s_as_input=True),
-    UGP(s_as_input=False),
-    UGPEqOpp(s_as_input=False),
-    UGPEqOpp(s_as_input=True),
+    UGP(s_as_input=True, use_lr=True),
+    UGP(s_as_input=False, use_lr=True),
+    # UGPEqOpp(s_as_input=False, use_lr=True),
+    # UGPEqOpp(s_as_input=True, use_lr=True),
 ]
 
 DATASETS = [
     # format: (dataset_name, [sensitive_attributes], [split_ids])
     # ("two-gaussians", ["sensitive-attr"], [0, 1, 2, 3, 4]),
     ("adult", ["race", "sex"], [0, 1, 2]),
-    ("propublica-recidivism", ["race", "sex"], [0, 1, 2]),
+    # ("propublica-recidivism", ["race", "sex"], [0, 1, 2]),
 ]
 
 
