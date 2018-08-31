@@ -9,10 +9,14 @@ OUTPUT_DIR = "./predictions/"
 DATA_DIR = "./data_files/"
 
 ALGOS = [
-    UGP(s_as_input=True, use_lr=True),
-    UGP(s_as_input=False, use_lr=True),
+    # UGP(s_as_input=True, use_lr=True),
+    # UGP(s_as_input=False, use_lr=True),
+    # UGPDemPar(s_as_input=True, use_lr=True),
+    # UGPDemPar(s_as_input=False, use_lr=True),
     # UGPEqOpp(s_as_input=False, use_lr=True),
     # UGPEqOpp(s_as_input=True, use_lr=True),
+    UGPDemPar(s_as_input=True),
+    UGPDemPar(s_as_input=False),
 ]
 
 DATASETS = [

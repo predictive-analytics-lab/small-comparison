@@ -129,8 +129,6 @@ log.txt
 
 .DS_Store
 
-data_files/
-predictions/
 flag_*.txt
 
 *.png
