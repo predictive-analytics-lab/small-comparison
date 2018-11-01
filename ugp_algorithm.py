@@ -71,6 +71,7 @@ class UGP:
                 inf='LogReg',
                 batch_size=LR_BATCH_SIZE,
                 train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+                dataset_standardize=True,
             )
         return dict(
             inf='VariationalWithS',
@@ -145,6 +146,7 @@ class UGPDemPar(UGP):
                 inf='FairLogReg',
                 batch_size=LR_BATCH_SIZE,
                 train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+                dataset_standardize=True,
                 target_rate1=target_rate,
                 target_rate2=target_rate,
                 biased_acceptance1=biased_acceptance[0],
@@ -155,7 +157,7 @@ class UGPDemPar(UGP):
                 p_s1=p_s[1],
             )
         return dict(
-            inf='FairLogReg' if self.use_lr else 'VariationalYbar',
+            inf='VariationalYbar',
             target_rate1=target_rate,
             target_rate2=target_rate,
             biased_acceptance1=biased_acceptance[0],
@@ -214,6 +216,7 @@ class UGPEqOpp(UGP):
                 inf='EqOddsLogReg',
                 batch_size=LR_BATCH_SIZE,
                 train_steps=(raw_data['ytrain'].shape[0] * LR_EPOCHS) // LR_BATCH_SIZE,
+                dataset_standardize=True,
                 p_ybary0_s0=1.0,
                 p_ybary0_s1=1.0,
                 p_ybary1_s0=1.0,
@@ -413,6 +416,10 @@ def _flags(parameters, data_path, save_path, s_as_input, model_name, num_train):
         num_samples_pred=2000,
         s_as_input=s_as_input,
         num_inducing=MAX_NUM_INDUCING,
+        # parameters for logistic regression:
+        use_bias=True,
+        lr_l2_kernel_factor=0.1,
+        lr_l2_bias_factor=0.1,
     ), **parameters}
 
 
