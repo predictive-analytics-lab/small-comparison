@@ -401,7 +401,7 @@ def _flags(parameters, data_path, save_path, s_as_input, model_name, num_train):
         chkpnt_steps=100000,
         save_dir='',  # "/home/ubuntu/out2/",
         plot='',
-        logging_steps=5,
+        logging_steps=10,
         gpus=f"{int(sys.argv[1])}" if len(sys.argv) > 1 else '0',
         preds_path=save_path,  # path where to save predictions
         num_components=1,

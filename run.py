@@ -8,16 +8,22 @@ from ugp_algorithm import UGP, UGPDemPar, UGPEqOpp
 OUTPUT_DIR = "./predictions/"
 DATA_DIR = "./data_files/"
 
-ALGOS = [
-    UGP(s_as_input=True, use_lr=True),
-    UGP(s_as_input=False, use_lr=True),
-    # UGPDemPar(s_as_input=True, use_lr=True),
-    # UGPDemPar(s_as_input=False, use_lr=True),
-    UGPEqOpp(s_as_input=False, use_lr=True),
-    UGPEqOpp(s_as_input=True, use_lr=True),
-    # UGPDemPar(s_as_input=True),
-    # UGPDemPar(s_as_input=False),
-]
+algos = []
+for tnr in [0.7]:  # [0.6, 0.7, 0.8, 0.9, 1.0]:
+    for tpr in [0.6, 0.7, 0.8, 0.9, 1.0]:
+        algos.append(UGPEqOpp(use_lr=True, s_as_input=True, tnr0=tnr, tnr1=tnr, tpr0=tpr, tpr1=tpr))
+        algos.append(UGPEqOpp(use_lr=True, s_as_input=False, tnr0=tnr, tnr1=tnr, tpr0=tpr, tpr1=tpr))
+ALGOS = algos
+# ALGOS = [
+#     # UGP(s_as_input=True, use_lr=True),
+#     # UGP(s_as_input=False, use_lr=True),
+#     # UGPDemPar(s_as_input=True, use_lr=True),
+#     # UGPDemPar(s_as_input=False, use_lr=True),
+#     UGPEqOpp(s_as_input=False, use_lr=True),
+#     UGPEqOpp(s_as_input=True, use_lr=True),
+#     # UGPDemPar(s_as_input=True),
+#     # UGPDemPar(s_as_input=False),
+# ]
 
 DATASETS = [
     # format: (dataset_name, [sensitive_attributes], [split_ids])
