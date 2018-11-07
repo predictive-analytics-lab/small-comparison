@@ -42,6 +42,38 @@ def load_predictions(algo_names, dataset_name, sensitives, split_ids, prediction
 
 
 def dict_from_npz(npz_path):
+    """Dictionary from npz file"""
     with np.load(npz_path) as npz_data:
         data = {k: npz_data[k] for k in npz_data.files}
     return data
+
+
+def load_matching_algos(filter_func, predictions_path, dataset_name=None, sensitives=None,
+                        split_ids=None):
+    """Load predictions where the name of the algorithm returns true when passed to `filter_func`"""
+    predictions = {}
+    for file_path in Path(predictions_path).iterdir():
+        if not file_path.is_file():
+            continue
+        name_parts = file_path.stem.split('_')  # the stem is the filename without file extension
+        if len(name_parts) < 4:
+            continue
+
+        # optionally test whether this is the right dataset
+        this_dataset_name = name_parts[0]
+        sensitive = name_parts[1]
+        split_id = name_parts[2]
+        if dataset_name is not None and this_dataset_name != dataset_name:
+            continue
+        if sensitives is not None and sensitive not in sensitives:
+            continue
+        if split_ids is not None and split_id not in split_ids:
+            continue
+
+        # join everything together again except for the first three parts (dataset_name, sensitive
+        # and split_id)
+        algo_name = "_".join(name_parts[3:])
+        if not filter_func(algo_name):  # test whether it's the correct algo name
+            continue
+        predictions[algo_name][sensitive][split_id] = dict_from_npz(file_path)
+    return predictions
