@@ -1,1 +1,1 @@
-# Small comparison framework
+# Tiny comparison framework
